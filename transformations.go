@@ -202,21 +202,37 @@ func transformCropAndResize(img image.Image, transformation *Transformation) (im
 
 		draw.Draw(imgDraw, croppedRect, img, topLeftPoint, draw.Src)
 		imgNew = imgDraw.SubImage(croppedRect)
+	case CroppingModeWidthThenPart:
+		// first resize
+		imgNew = resize.Resize(uint(width), 0, img, resize.Bilinear)
+		imgWidth = imgNew.Bounds().Dx()
+		imgHeight = imgNew.Bounds().Dy()
+		var croppedRect image.Rectangle
+		if float32(width)*(float32(imgHeight)/float32(imgWidth)) > float32(height) {
+			// Whole width displayed
+			newHeight := int((float32(imgWidth) / float32(width)) * float32(height))
+			croppedRect = image.Rect(0, 0, imgWidth, newHeight)
+		} else {
+			// Whole height displayed
+			newWidth := int((float32(imgHeight) / float32(height)) * float32(width))
+			croppedRect = image.Rect(0, 0, newWidth, imgHeight)
+		}
+
+		topLeftPoint := calculateTopLeftPointFromGravity(gravity, croppedRect.Dx(), croppedRect.Dy(), imgWidth, imgHeight)
+		imgDraw := image.NewRGBA(croppedRect)
+
+		draw.Draw(imgDraw, croppedRect, imgNew, topLeftPoint, draw.Src)
+		imgNew = resize.Resize(uint(width), uint(height), imgDraw, resize.Bilinear)	
 	}
 
 	// Filters
-	if parameters.filter == FilterGrayScale {
-		bounds := imgNew.Bounds()
-		w, h := bounds.Max.X, bounds.Max.Y
-		gray := image.NewGray(bounds)
-		for x := 0; x < w; x++ {
-			for y := 0; y < h; y++ {
-				oldColor := imgNew.At(x, y)
-				grayColor := color.GrayModel.Convert(oldColor)
-				gray.Set(x, y, grayColor)
-			}
-		}
-		imgNew = gray
+	switch parameters.filter {
+	case FilterGrayScale:
+		imgNew = grayScale(imgNew)
+	case FilterPixelate:
+		imgNew = pixelate(imgNew,true)
+	case FilterGrayPixelate:
+		imgNew = pixelate(imgNew,false)
 	}
 
 	if transformation.watermark != nil {
@@ -309,6 +325,50 @@ func transformCropAndResize(img image.Image, transformation *Transformation) (im
 	}
 
 	return
+}
+
+func grayScale(i image.Image) image.Image {
+	bounds := i.Bounds()
+	w, h := bounds.Max.X, bounds.Max.Y
+	gray := image.NewGray(bounds)
+	for x := 0; x < w; x++ {
+		for y := 0; y < h; y++ {
+			oldColor := i.At(x, y)
+			grayColor := color.GrayModel.Convert(oldColor)
+			gray.Set(x, y, grayColor)
+		}
+	}
+	return gray
+}
+
+func pixelate(i image.Image, inColor bool) image.Image {
+	bounds := i.Bounds()
+	w, h := bounds.Max.X, bounds.Max.Y
+	var out colorSetter
+	if inColor == true {
+		out = image.NewRGBA(bounds)
+	} else {
+		out = image.NewGray(bounds)
+	}	
+	b := w / 30
+	for x := 0; x < w; x+=b {
+		cx := x + (b/2)
+		for y := 0; y < h; y+=b {			
+			cy := y + (b/2)
+			cColor := i.At(cx, cy)
+			for yd := y; (yd < y + b) && (yd < h); yd++ {
+				for xd := x; (xd < x + b) && (xd < w); xd++ {
+					out.Set(xd, yd, cColor)
+				}
+			}			
+		}
+	}
+	return out	
+}
+
+type colorSetter interface {
+	image.Image
+	Set(x, y int, c color.Color)
 }
 
 func calculateTopLeftPointFromGravity(gravity string, width, height, imgWidth, imgHeight int) image.Point {

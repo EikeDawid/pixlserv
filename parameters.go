@@ -23,6 +23,8 @@ const (
 	CroppingModePart = "p"
 	// CroppingModeKeepScale crops an image so that it fills a frame of given dimensions, keeps scale
 	CroppingModeKeepScale = "k"
+	// CroppingModeWidthThenPart, resizes an image first to the right width and then crops an image so that it fills a frame of given dimensions
+	CroppingModeWidthThenPart = "w"
 
 	GravityNorth     = "n"
 	GravityNorthEast = "ne"
@@ -35,6 +37,8 @@ const (
 	GravityCenter    = "c"
 
 	FilterGrayScale = "grayscale"
+	FilterPixelate = "pixel"
+	FilterGrayPixelate = "graypixel"
 
 	DefaultScale        = 1
 	DefaultCroppingMode = CroppingModeExact
@@ -134,7 +138,7 @@ func parseTransformationName(parametersStr string) string {
 }
 
 func isValidCroppingMode(str string) bool {
-	return str == CroppingModeExact || str == CroppingModeAll || str == CroppingModePart || str == CroppingModeKeepScale
+	return str == CroppingModeExact || str == CroppingModeAll || str == CroppingModePart || str == CroppingModeKeepScale || str == CroppingModeWidthThenPart
 }
 
 func isValidGravity(str string) bool {
@@ -142,7 +146,7 @@ func isValidGravity(str string) bool {
 }
 
 func isValidFilter(str string) bool {
-	return str == FilterGrayScale
+	return str == FilterGrayScale || str == FilterPixelate || str == FilterGrayPixelate
 }
 
 func isEasternGravity(str string) bool {
