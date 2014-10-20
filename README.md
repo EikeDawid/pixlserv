@@ -2,7 +2,7 @@
 
 A Go server for on-the-fly processing and serving of images. A self-hosted image management solution for websites and mobile apps.
 
-1. Get the code and install the server
+1. **Get the code and install the server**
 
 2. Connect it to Amazon S3 or Google Cloud Storage or just use local storage, connect it to redis
 
